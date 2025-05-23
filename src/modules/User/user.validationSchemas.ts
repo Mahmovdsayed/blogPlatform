@@ -80,4 +80,79 @@ const signUpValidationSchema = z.object({
   role: z.enum(["user", "admin"]).optional().default("user"),
 });
 
-export { signUpValidationSchema };
+const signInValidationSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Invalid email format" })
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+      message: "Invalid email format",
+    }),
+
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .max(30, { message: "Password must be at most 30 characters" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+      message:
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+    }),
+});
+
+const verifyOTP = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Invalid email format" })
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+      message: "Invalid email format",
+    }),
+  otp: z
+    .string()
+    .trim()
+    .min(6, { message: "OTP must be 6 digits" })
+    .max(6, { message: "OTP must be 6 digits" }),
+});
+
+const newOTP = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Invalid email format" })
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+      message: "Invalid email format",
+    }),
+});
+
+const resetPasswordValidationSchema = z
+  .object({
+    password: z
+      .string()
+      .min(6, { message: "Password must be at least 6 characters" })
+      .max(30, { message: "Password must be at most 30 characters" })
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      }),
+    confirmPassword: z
+      .string()
+      .min(6, { message: "Confirm password must be at least 6 characters" })
+      .max(30, { message: "Confirm password must be at most 30 characters" }),
+    token: z
+      .string()
+      .trim()
+      .min(6, { message: "Reset token must be 6 digits" })
+      .max(6, { message: "Reset token must be 6 digits" }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export {
+  signUpValidationSchema,
+  signInValidationSchema,
+  verifyOTP,
+  newOTP,
+  resetPasswordValidationSchema,
+};

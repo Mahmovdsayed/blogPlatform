@@ -9,8 +9,8 @@
     "start": "node dist/index.js",
     "dev": "nodemon --watch dist --exec node dist/index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["blog","platform","express", "mongodb", "nodejs", "typescript", "api","restapi"],
+  "author": "mahmoudsayed",
   "license": "ISC",
   "description": "Blogging Platform is a comprehensive solution that enables users to easily create, manage, and share blog posts. The platform features secure user authentication, allowing authors to create, edit, and delete their posts, organize content with categories and tags, and engage with readers through comments. It supports image uploads and provides advanced search and filtering capabilities. Built with scalability and security in mind, the platform offers a flexible API for seamless integration with other applications. Designed for both novice and professional bloggers, it delivers a user-friendly experience that fosters content creation and community interaction.",
   "dependencies": {

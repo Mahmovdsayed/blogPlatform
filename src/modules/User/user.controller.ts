@@ -1,12 +1,20 @@
-import bcrypt from "bcrypt";
-import { signUpValidationSchema } from "./user.validationSchemas.js";
+import {
+  newOTP,
+  resetPasswordValidationSchema,
+  signInValidationSchema,
+  signUpValidationSchema,
+  verifyOTP,
+} from "./user.validationSchemas.js";
+import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import User from "../../DB/Models/user.model.js";
 import {
   hashPassword,
   uploadImageToCloudinary,
+  verifyPassword,
 } from "../../helpers/uploadImageToCloudinary.js";
 import sendEmailService from "../../utils/email.js";
+import { clientURL } from "../../utils/statics.js";
 
 const signUpHandler = async (
   req: Request,
@@ -17,7 +25,6 @@ const signUpHandler = async (
     const { userName, firstName, lastName, email, password, gender } = req.body;
     const image = req.file;
 
-    // Validate inputs using zod schema
     try {
       await signUpValidationSchema.parseAsync({
         userName,
@@ -31,27 +38,22 @@ const signUpHandler = async (
       return next(validationError);
     }
 
-    // Check if email exists
     const isEmailExists = await User.findOne({ email });
     if (isEmailExists) {
       return next(new Error("Email already exists"));
     }
 
-    // Check if username exists
     const isUserNameExists = await User.findOne({ userName });
     if (isUserNameExists) {
       return next(new Error("Username already exists"));
     }
 
-    // Hash the password
     const hashPass = await hashPassword(password);
 
-    // Default avatar URL
     let imageUrl =
       "https://res.cloudinary.com/dxvpvtcbg/image/upload/v1713493679/sqlpxs561zd9oretxkki.jpg";
     let publicId = "";
 
-    // Check if image exists and has size > 0 before uploading
     if (image && image.size > 0) {
       try {
         const uploadResult = await uploadImageToCloudinary(
@@ -68,7 +70,6 @@ const signUpHandler = async (
       }
     }
 
-    // Create new user instance
     const newUser = new User({
       userName,
       firstName,
@@ -84,22 +85,27 @@ const signUpHandler = async (
 
     await newUser.save();
 
-    const message = `
-  <div style="max-width:600px;margin:40px auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 0 8px rgba(0,0,0,0.1);font-family:Arial,sans-serif;color:#333;">
-    <h1 style="color:#007bff;font-size:28px;margin-bottom:20px;">Welcome, ${userName}!</h1>
-    <p style="font-size:16px;line-height:1.5;">Thanks for signing up to BlogPlatform. We're excited to have you onboard.</p>
-    <p style="font-size:16px;line-height:1.5;">Start exploring amazing features like creating and sharing blog posts, managing your content, and connecting with others.</p>
-    <a href="https://yourplatformurl.com/login" style="display:inline-block;background:#007bff;color:#fff;padding:12px 25px;border-radius:5px;text-decoration:none;margin-top:25px;font-weight:bold;" target="_blank" rel="noopener noreferrer">Get Started</a>
-    <p style="font-size:16px;line-height:1.5;margin-top:25px;">If you need any help, feel free to reply to this email.</p>
-    <p style="font-size:16px;line-height:1.5;">Best regards,<br/>The BlogPlatform Team</p>
-    <div style="font-size:12px;color:#777;text-align:center;margin-top:30px;">&copy; 2025 BlogPlatform. All rights reserved.</div>
-  </div>
-`;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    newUser.otp = otp;
+    newUser.otpExpiry = otpExpiry;
+    await newUser.save();
+
+    const otpMessage = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Email Verification - OTP</h2>
+        <p>Thank you for signing up! Please use the following One-Time Password (OTP) to verify your email address:</p>
+        <h3 style="color: #007bff;">${otp}</h3>
+        <p>This OTP is valid for 60 minutes.</p>
+        <p>If you did not sign up for BlogPlatform, please ignore this email.</p>
+      </div>
+    `;
 
     await sendEmailService({
       to: email,
-      subject: "Welcome to BlogPlatform!",
-      message,
+      subject: "Verify Your Email Address",
+      message: otpMessage,
     });
 
     res.status(201).json({
@@ -113,4 +119,282 @@ const signUpHandler = async (
   }
 };
 
-export default signUpHandler;
+const signInHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    try {
+      await signInValidationSchema.parseAsync({
+        email,
+        password,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    const isEmailExists = await User.findOne({ email });
+    if (!isEmailExists) {
+      return next(new Error("Invalid login credentials"));
+    }
+
+    if (!isEmailExists.isVerified) {
+      return next(new Error("Please verify your email first"));
+    }
+    const isPasswordMatch = await verifyPassword(
+      password,
+      isEmailExists.password
+    );
+
+    if (!isPasswordMatch) {
+      return next(new Error("Invalid login credentials"));
+    }
+    const token = jwt.sign(
+      {
+        id: isEmailExists._id,
+        email: isEmailExists.email,
+        userName: isEmailExists.userName,
+      },
+      process.env.LOGIN_SIG || "",
+      {
+        expiresIn: "30d",
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "User signed in successfully",
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const OTPVerify = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+
+    try {
+      await verifyOTP.parseAsync({
+        email,
+        otp,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) return next(new Error("User not found"));
+    if (user.isVerified) return next(new Error("User already verified"));
+    if (user.otp !== otp.trim()) return next(new Error("Invalid OTP"));
+
+    const otpExpiry = user.otpExpiry ? new Date(user.otpExpiry) : new Date(0);
+    if (otpExpiry < new Date())
+      return next(new Error("OTP has expired. Please request a new OTP."));
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User verified successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const requestNewOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+    try {
+      await newOTP.parseAsync({
+        email,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) return next(new Error("User not found"));
+    if (user.isVerified) return next(new Error("User already verified"));
+    const now = new Date();
+    const otpExpiry = user.otpExpiry ? new Date(user.otpExpiry) : new Date(0);
+
+    if (otpExpiry > now) {
+      const remainingTime = Math.ceil(
+        (otpExpiry.getTime() - now.getTime()) / 60000
+      );
+      return next(
+        new Error(
+          `Please wait ${remainingTime} minutes before requesting a new OTP.`
+        )
+      );
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const newOtpExpiry = new Date(now.getTime() + 60 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpiry = newOtpExpiry;
+    await user.save();
+
+    const message = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>OTP Verification</h2>
+        <p>Your One-Time Password (OTP) for email verification is:</p>
+        <h3 style="color: #007bff;">${otp}</h3>
+        <p>This OTP is valid for 60 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+
+    await sendEmailService({
+      to: email,
+      subject: "Your OTP for BlogPlatform",
+      message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "New OTP sent to your email",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+    try {
+      await newOTP.parseAsync({
+        email,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return next(new Error("User not found"));
+    if (!user.isVerified) return next(new Error("User not verified"));
+
+    if (
+      user.resetPasswordExpires &&
+      user.resetPasswordExpires.getTime() > Date.now()
+    ) {
+      const remainingTime = Math.ceil(
+        (user.resetPasswordExpires.getTime() - Date.now()) / 60000
+      );
+      return next(
+        new Error(
+          `You have already requested a password reset. Please wait ${remainingTime} minutes before trying again.`
+        )
+      );
+    }
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetPasswordExpires;
+    await user.save();
+
+    const clientResetURL = `${clientURL}/reset-password/${resetToken}`;
+
+    const resetMessage = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Password Reset Request</h2>
+        <p>You have requested to reset your password for your BlogPlatform account.</p>
+        <p>Please use the following code to reset your password:</p>
+        <h3 style="color: #007bff;">${clientResetURL}</h3>
+        <p>This code is valid for 60 minutes.</p>
+        <p>If you did not request a password reset, please ignore this email.</p>
+      </div>
+    `;
+
+    await sendEmailService({
+      to: email,
+      subject: "Password Reset Request",
+      message: resetMessage,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset code sent to your email",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { password, confirmPassword, token } = req.body;
+
+    try {
+      await resetPasswordValidationSchema.parseAsync({
+        password,
+        confirmPassword,
+        token,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    if (password !== confirmPassword) {
+      return next(new Error("Passwords do not match"));
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) return next(new Error("Invalid or expired token"));
+
+    user.password = await hashPassword(password);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export {
+  signUpHandler,
+  signInHandler,
+  OTPVerify,
+  requestNewOTP,
+  forgotPassword,
+  resetPassword,
+};
