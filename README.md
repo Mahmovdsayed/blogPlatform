@@ -51,44 +51,13 @@ Pull requests are welcome. Please open an issue first to discuss what you would 
 
 | Method | Endpoint       | Description       |
 |--------|---------------|-------------------|
-| POST   | `/auth/signup` | Register new user |
-| POST   | `/auth/login`  | User login        |
+| POST   | `/auth/signup` | Register new user (sends OTP email) |
+| POST   | `/auth/signin`  | User login (JWT token)        |
+| POST   | `/auth/verify-otp`  | Verify email using OTP        |
+| POST   | `/auth/resend-otp`  | Request new OTP (if expired or not received)        |
+| POST   | `/auth/forgot-password`  | Request password reset (sends reset token via email)        |
+| POST   | `/auth/reset-password`  | Reset password using valid token        |
 
-### Users
-
-| Method | Endpoint            | Description          |
-|--------|---------------------|----------------------|
-| GET    | `/users/me`         | Get current user     |
-| PATCH  | `/users/me`         | Update profile       |
-| GET    | `/users/:username`  | Get user profile     |
-
-### Posts
-
-| Method | Endpoint            | Description          |
-|--------|---------------------|----------------------|
-| POST   | `/posts`            | Create new post      |
-| GET    | `/posts`            | Get all posts        |
-| GET    | `/posts/:postId`    | Get single post      |
-| PATCH  | `/posts/:postId`    | Update post          |
-| DELETE | `/posts/:postId`    | Delete post          |
-
-### Comments
-
-| Method | Endpoint                     | Description          |
-|--------|------------------------------|----------------------|
-| POST   | `/posts/:postId/comments`    | Add comment          |
-| GET    | `/posts/:postId/comments`    | Get post comments    |
-| DELETE | `/comments/:commentId`       | Delete comment       |
-
-
-## 🔒 Security
-
-**Security Features:**
-- Rate limiting (100 requests/min)
-- CSRF protection with SameSite cookies
-- MongoDB injection prevention
-- Input sanitization with DOMPurify
-- Automated security audits (weekly)
 
 
 ---
