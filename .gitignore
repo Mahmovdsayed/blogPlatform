@@ -16,8 +16,10 @@ logs/
 # Environment files
 .env
 .env.*
-.dev.config.env
+dev.config.env
 .env.local
+config/dev.config.env
+config/config.env
 
 # Build files
 dist/

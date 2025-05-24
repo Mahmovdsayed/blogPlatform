@@ -2,12 +2,15 @@ import { Router } from "express";
 import expressAsyncHandler from "express-async-handler";
 import { validationMiddleware } from "../../middlewares/validation.middleware.js";
 import {
+  deleteUser,
   forgotPassword,
+  getUserProfile,
   OTPVerify,
   requestNewOTP,
   resetPassword,
   signInHandler,
   signUpHandler,
+  updateUser,
 } from "./user.controller.js";
 import {
   newOTP,
@@ -17,6 +20,7 @@ import {
   verifyOTP,
 } from "./user.validationSchemas.js";
 import { multerMiddleWareLocal } from "../../middlewares/multer.js";
+import { auth } from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -56,5 +60,9 @@ router.post(
   validationMiddleware({ body: resetPasswordValidationSchema }),
   expressAsyncHandler(resetPassword)
 );
+
+router.get("/user", expressAsyncHandler(getUserProfile));
+router.patch("/update", auth(), expressAsyncHandler(updateUser));
+router.delete("/delete", auth(), expressAsyncHandler(deleteUser));
 
 export default router;

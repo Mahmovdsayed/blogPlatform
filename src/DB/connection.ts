@@ -1,3 +1,7 @@
+/**
+ * The function `db_connection` establishes a connection to a MongoDB database using Mongoose in a
+ * TypeScript environment.
+ */
 import mongoose from "mongoose";
 
 const db_connection = async (): Promise<void> => {

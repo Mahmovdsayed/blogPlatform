@@ -1,3 +1,13 @@
+/**
+ * The above TypeScript code defines two multer middleware functions for handling file uploads with
+ * specific image extensions.
+ * @param  - 1. `multer`: The main library for handling file uploads in Node.js.
+ * @returns The code snippet defines two functions `multerMiddleWareLocal` and `multerMiddleWareHost`
+ * that return configured instances of Multer middleware for handling file uploads. The
+ * `multerMiddleWareLocal` function returns a Multer middleware configured with memory storage, while
+ * the `multerMiddleWareHost` function returns a Multer middleware configured with disk storage. Both
+ * functions use a file filter to
+ */
 import multer, { FileFilterCallback } from "multer";
 import { Request } from "express";
 import allowedExtensions from "../utils/allowedExtensions.js";

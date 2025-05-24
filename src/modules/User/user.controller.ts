@@ -3,12 +3,14 @@ import {
   resetPasswordValidationSchema,
   signInValidationSchema,
   signUpValidationSchema,
+  updateProfileValidationSchema,
   verifyOTP,
 } from "./user.validationSchemas.js";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import User from "../../DB/Models/user.model.js";
 import {
+  deleteImageFromCloudinary,
   hashPassword,
   uploadImageToCloudinary,
   verifyPassword,
@@ -157,6 +159,7 @@ const signInHandler = async (
         id: isEmailExists._id,
         email: isEmailExists.email,
         userName: isEmailExists.userName,
+        role: isEmailExists.role,
       },
       process.env.LOGIN_SIG || "",
       {
@@ -389,6 +392,108 @@ const resetPassword = async (
   }
 };
 
+const getUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { userID } = req.query;
+
+    const user = await User.findById(userID).select(
+      "-password -__v -otp -otpExpiry -resetPasswordToken -resetPasswordExpires -role"
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "User profile fetched successfully",
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { _id } = req.authUser!;
+    const user = await User.findById(_id).select(
+      "-password -__v -otp -otpExpiry -resetPasswordToken -resetPasswordExpires -role"
+    );
+    if (!user) return next(new Error("User not found"));
+
+    const { userName, firstName, lastName, gender, bio } = req.body;
+
+    try {
+      await updateProfileValidationSchema.parseAsync({
+        userName,
+        firstName,
+        lastName,
+        gender,
+        bio,
+      });
+    } catch (validationError) {
+      return next(validationError);
+    }
+
+    const isUserNameExists = await User.findOne({
+      userName,
+      _id: { $ne: _id },
+    });
+
+    if (isUserNameExists) {
+      return next(new Error("Username already exists"));
+    }
+
+    user.userName = userName;
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.gender = gender;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { _id } = req.authUser!;
+    const user = await User.findById(_id);
+    if (!user) return next(new Error("User not found"));
+
+    if (user.image.public_id) {
+      try {
+        await deleteImageFromCloudinary(user.image.public_id);
+      } catch (error) {
+        return next(new Error("Failed to delete image from Cloudinary"));
+      }
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export {
   signUpHandler,
@@ -397,4 +502,7 @@ export {
   requestNewOTP,
   forgotPassword,
   resetPassword,
+  getUserProfile,
+  updateUser,
+  deleteUser,
 };

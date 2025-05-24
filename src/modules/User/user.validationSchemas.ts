@@ -149,10 +149,47 @@ const resetPasswordValidationSchema = z
     path: ["confirmPassword"],
   });
 
+const updateProfileValidationSchema = z.object({
+  userName: z
+    .string()
+    .trim()
+    .min(3, { message: "Username must be at least 3 characters" })
+    .max(20, { message: "Username must be at most 20 characters" })
+    .regex(/^[a-zA-Z0-9_]+$/, {
+      message: "Username can only contain letters, numbers, and underscores",
+    })
+    .optional(),
+
+  firstName: z
+    .string()
+    .trim()
+    .min(3, { message: "First name must be at least 3 characters" })
+    .max(20, { message: "First name must be at most 20 characters" })
+    .regex(/^[A-Za-z]+$/, {
+      message: "First name can only contain letters",
+    })
+    .transform((val) => val.charAt(0).toUpperCase() + val.slice(1))
+    .optional(),
+
+  lastName: z
+    .string()
+    .trim()
+    .min(3, { message: "Last name must be at least 3 characters" })
+    .max(20, { message: "Last name must be at most 20 characters" })
+    .regex(/^[A-Za-z]+$/, {
+      message: "Last name can only contain letters",
+    })
+    .transform((val) => val.charAt(0).toUpperCase() + val.slice(1))
+    .optional(),
+  gender: z.enum(["male", "female"]).optional().default("male").optional(),
+  bio: z.string().trim().optional(),
+});
+
 export {
   signUpValidationSchema,
   signInValidationSchema,
   verifyOTP,
   newOTP,
   resetPasswordValidationSchema,
+  updateProfileValidationSchema,
 };

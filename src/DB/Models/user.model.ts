@@ -6,45 +6,30 @@ const userSchema = new Schema(
   {
     userName: {
       type: String,
-      required: [true, "Username is required"],
       unique: true,
       trim: true,
       lowercase: true,
-      minlength: [3, "Username must be at least 3 characters"],
-      maxlength: [20, "Username must be at most 20 characters"],
       index: true,
     },
     firstName: {
       type: String,
-      required: [true, "First name is required"],
-      minlength: [3, "First name must be at least 3 characters"],
-      maxlength: [20, "First name must be at most 20 characters"],
       trim: true,
       lowercase: true,
     },
     lastName: {
       type: String,
-      required: [true, "Last name is required"],
-      minlength: [3, "Last name must be at least 3 characters"],
-      maxlength: [20, "Last name must be at most 20 characters"],
       trim: true,
       lowercase: true,
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
       unique: true,
       trim: true,
       lowercase: true,
-      match: [
-        /^[\w.-]+@[a-zA-Z\d.-]+\.[a-zA-Z]{2,}$/,
-        "Please provide a valid email address",
-      ],
       index: true,
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
       trim: true,
     },
     isVerified: {
@@ -72,6 +57,10 @@ const userSchema = new Schema(
       default: "user",
     },
     image: ImageSchema,
+    bio: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

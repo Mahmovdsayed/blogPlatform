@@ -1,3 +1,13 @@
+/**
+ * The function `sendEmailService` sends an email using Nodemailer with specified options like
+ * recipient, subject, and message.
+ * @param {SendEmailOptions}  - The code you provided is a TypeScript function that sends an email
+ * using Nodemailer. Here's an explanation of the parameters and the functionality of the code:
+ * @returns The `sendEmailService` function returns a Promise that resolves to a boolean value. The
+ * boolean value indicates whether the email was successfully accepted for delivery. If the
+ * `info.accepted` array has at least one email address, the function will return `true`, indicating
+ * that the email was accepted. Otherwise, it will return `false`.
+ */
 import nodemailer, { SentMessageInfo } from "nodemailer";
 
 interface SendEmailOptions {

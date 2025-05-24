@@ -1,19 +1,15 @@
+/**
+ * The `auth` function is a middleware in TypeScript that verifies and attaches a user object to the
+ * request based on a JWT access token.
+ * @returns The `auth` function is being returned, which is a middleware function used for
+ * authentication in an Express application.
+ */
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../DB/Models/user.model.js";
 
-interface AuthRequest extends Request {
-  authUser?: {
-    _id: string;
-    username: string;
-    email: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}
-
 export const auth = () => {
-  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const accesstoken = req.headers.accesstoken as string | undefined;
 
@@ -49,7 +45,7 @@ export const auth = () => {
       // Find user by ID
       const findUser = await User.findById(
         decodedData.id,
-        "_id username email createdAt updatedAt"
+        "_id username email createdAt updatedAt role"
       );
       if (!findUser) {
         const error = new Error("please signUp first");
