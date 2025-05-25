@@ -11,8 +11,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-
-
 const allowedImageTypes = ["image/png", "image/jpeg", "image/jpg"];
 
 const uploadImageToCloudinary = async (
@@ -45,36 +43,25 @@ const uploadImageToCloudinary = async (
 };
 
 const uploadBannerToCloudinary = async (
-  image: File,
+  image: Express.Multer.File,
   userName: any,
   folderName: string
 ) => {
-  if (!allowedImageTypes.includes(image.type)) {
-    new Error("Invalid image format. Allowed formats: PNG, JPEG, JPG , GIF");
-  }
+  const b64 = Buffer.from(image.buffer).toString("base64");
+  const dataURI = `data:${image.mimetype};base64,${b64}`;
 
-  const buffer = Buffer.from(await image.arrayBuffer());
-  const userFolderPath = `portfolio/userImages/${userName}/${folderName}`;
-
-  const uploadResult = await cloudinary.uploader.upload(
-    `data:${image.type};base64,${buffer.toString("base64")}`,
-    {
-      folder: userFolderPath,
-      width: 1920,
-      height: 1080,
-      crop: "fill",
-      gravity: "center",
-      use_filename: true,
-      unique_filename: false,
-      quality: "100",
-      format: "webp",
-      timeout: 60000,
-    }
-  );
-
-  if (!uploadResult.secure_url || !uploadResult.public_id) {
-    new Error("Failed to upload image to Cloudinary.");
-  }
+  const uploadResult = await cloudinary.uploader.upload(dataURI, {
+    folder: `blogPlatform/userImages/${userName}/${folderName}`,
+    width: 1920,
+    height: 1080,
+    crop: "fill",
+    gravity: "center",
+    use_filename: true,
+    unique_filename: false,
+    quality: "100",
+    format: "webp",
+    timeout: 60000,
+  });
 
   return {
     imageUrl: uploadResult.secure_url,

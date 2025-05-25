@@ -7,12 +7,14 @@ import cors from "cors";
 import db_connection from "./DB/connection.js";
 import { globalResponse } from "./middlewares/globalResponse.js";
 import router from "./modules/User/user.routes.js";
+import blogRouter from "./modules/Blog/blog.routes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use("/auth", router);
+app.use("/blog", blogRouter);
 
 db_connection();
 
